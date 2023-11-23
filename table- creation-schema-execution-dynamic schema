@@ -1,0 +1,183 @@
+CREATE TABLE myassigndata.ext_nifty_parquet (
+    `Date` STRING,
+    Symbol STRING,
+    Series STRING,
+    PrevClose DECIMAL(10,2),
+    Open DECIMAL(10,2),
+    High DECIMAL(10,2),
+    Low DECIMAL(10,2),
+    Last DECIMAL(10,2),
+    Close DECIMAL(10,2),
+    VWAP DECIMAL(10,2),
+    Volume INT,
+    Turnover DECIMAL(18,2),
+    Trades INT,
+    DeliverableVolume INT,
+    `%Deliverble` DECIMAL(5,4)
+)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+WITH SERDEPROPERTIES (
+  "separatorChar" = ",",
+  "quoteChar" = "\"",
+  "escapeChar" = "\\"
+)
+STORED AS TEXTFILE
+LOCATION '/user/bigdatapedia/myassigndata/inputs/parquet_nifty/';
+
+========================================================================================
+
+LOAD DATA LOCAL INPATH '/home/bigdatapedia/00MyOwn/owndata/nifty.csv' INTO TABLE myassigndata.ext_nifty_parquet;
+
+===========================================================================================
+
+CREATE EXTERNAL TABLE myassigndata.ext_nifty_dynamic_new (
+    Symbol STRING,
+    Series STRING,
+    PrevClose DECIMAL(10,2),
+    Open DECIMAL(10,2),
+    High DECIMAL(10,2),
+    Low DECIMAL(10,2),
+    Last DECIMAL(10,2),
+    Close DECIMAL(10,2),
+    VWAP DECIMAL(10,2),
+    Volume INT,
+    Turnover DECIMAL(18,2),
+    Trades INT,
+    DeliverableVolume INT,
+    `%Deliverble` DECIMAL(5,4)
+)
+PARTITIONED BY (year INT, month INT, day INT)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+WITH SERDEPROPERTIES (
+  "separatorChar" = ",",
+  "quoteChar" = "\"",
+  "escapeChar" = "\\"
+)
+STORED AS TEXTFILE
+LOCATION '/user/bigdatapedia/myassigndata/inputs/parquet_nifty_dynamic_new/';
+
+====================================================================
+
+LOAD DATA LOCAL INPATH '/home/bigdatapedia/00MyOwn/owndata/nifty.csv'
+INTO TABLE myassigndata.ext_nifty_dynamic_new
+PARTITION (year=2020, month=1, day=1);
+
+==================================================================
+
+-- Set dynamic partition mode to non-strict
+SET hive.exec.dynamic.partition.mode=nonstrict;
+
+-- Insert into the partitioned table
+INSERT INTO myassigndata.ext_nifty_dynamic_new PARTITION(year, month, day)
+SELECT
+    Symbol,
+    Series,
+    PrevClose as prev_close,
+    Open,
+    High,
+    Low,
+    Last,
+    Close,
+    VWAP,
+    Volume,
+    Turnover,
+    Trades,
+    DeliverableVolume as deliverable_volume,
+    `%Deliverble` as percent_deliverable,
+    CAST(SUBSTRING(`Date`, 1, 4) AS INT) as year,
+    CAST(SUBSTRING(`Date`, 6, 2) AS INT) as month,
+    CAST(SUBSTRING(`Date`, 9, 2) AS INT) as day
+FROM myassigndata.ext_nifty_parquet;
+
+-- Set dynamic partition mode to non-strict
+SET hive.exec.dynamic.partition.mode=nonstrict;
+
+-- Insert into the partitioned table with pre-calculated partitions
+INSERT INTO myassigndata.ext_nifty_dynamic_new PARTITION(year, month, day)
+SELECT
+    Symbol,
+    Series,
+    PrevClose as prev_close,
+    Open,
+    High,
+    Low,
+    Last,
+    Close,
+    VWAP,
+    Volume,
+    Turnover,
+    Trades,
+    DeliverableVolume as deliverable_volume,
+    `%Deliverble` as percent_deliverable,
+    CAST(SUBSTRING(`Date`, 1, 4) AS INT) as year,
+    CAST(SUBSTRING(`Date`, 6, 2) AS INT) as month,
+    CAST(SUBSTRING(`Date`, 9, 2) AS INT) as day
+FROM myassigndata.ext_nifty_parquet;
+
+
+- Set dynamic partition configurations
+hive> SET hive.exec.max.dynamic.partitions=10000;
+hive> SET hive.exec.max.dynamic.partitions.pernode=10000;
+hive> 
+    > -- Insert into the partitioned table with pre-calculated partitions
+    > INSERT INTO myassigndata.ext_nifty_dynamic_new PARTITION(year, month, day)
+    > SELECT
+    >    Symbol,
+    >    Series,
+    >    PrevClose as prev_close,
+    >    Open,
+    >    High,
+    >    Low,
+    >    Last,
+    >    Close,
+    >    VWAP,
+    >    Volume,
+    >    Turnover,
+    >    Trades,
+    >    DeliverableVolume as deliverable_volume,
+    >    `%Deliverble` as percent_deliverable,
+    >    CAST(SUBSTRING(`Date`, 1, 4) AS INT) as year,
+    >    CAST(SUBSTRING(`Date`, 6, 2) AS INT) as month,
+    >    CAST(SUBSTRING(`Date`, 9, 2) AS INT) as day
+    > FROM myassigndata.ext_nifty_parquet;
+
+============================
+
+!echo -e "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";  - to clear the screen
+
+======================================================
+WARNING: Hive-on-MR is deprecated in Hive 2 and may not be available in the future versions. Consider using a different execution engine (i.e. spark, tez) or using Hive 1.X releases.
+Query ID = bigdatapedia_20231123131739_63850987-8ba4-4143-b168-b9e281dfce64
+Total jobs = 3
+Launching Job 1 out of 3
+Number of reduce tasks is set to 0 since there's no reduce operator
+Starting Job = job_1700660314957_0013, Tracking URL = http://yarn-resourcemanager:8088/proxy/application_1700660314957_0013/
+Kill Command = /home/bigdatapedia/hadoop/bin/hadoop job  -kill job_1700660314957_0013
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 0
+2023-11-23 13:17:54,126 Stage-1 map = 0%,  reduce = 0%
+2023-11-23 13:18:30,133 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 17.24 sec
+2023-11-23 13:19:30,539 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 39.06 sec
+2023-11-23 13:20:30,731 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 60.94 sec
+2023-11-23 13:21:31,810 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 81.83 sec
+MapReduce Total cumulative CPU time: 1 minutes 31 seconds 260 msec
+Ended Job = job_1700660314957_0013
+Stage-4 is selected by condition resolver.
+Stage-3 is filtered out by condition resolver.
+Stage-5 is filtered out by condition resolver.
+Moving data to directory hdfs://hdfs-bigdatapedia:9000/user/hive_hive_2023-11-23_13-17-39_936_2256890894532006077-1/-ext-10000
+Loading data to table myassigndata.ext_nifty_dynamic_new partition (year=null, month=null, day=null)
+
+Loaded : 5098/5098 partitions.
+         Time taken to load dynamic partitions: 178.19 seconds
+         Time taken for adding to write entity : 0.412 seconds
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1   Cumulative CPU: 91.26 sec   HDFS Read: 5149154 HDFS Write: 6627743 SUCCESS
+Total MapReduce CPU Time Spent: 1 minutes 31 seconds 260 msec
+OK
+Time taken: 484.125 seconds
+
+
+
+
+
+
