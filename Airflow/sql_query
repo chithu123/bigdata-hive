@@ -1,0 +1,33 @@
+We would select changes that occurred on the last day by selecting from the employee's table, which contains the following columns.
+    show columns from employees;
+We would assume the hire_date to be the incremental column so we can use the query below.
+
+SELECT * 
+FROM employees.employees 
+WHERE hire_date >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+
+While this challenge says changes in the last one day, in a real-life scenario, it is important to make
+provision for pipeline failures and missed pipeline runs,
+so a good approach is always(for me) 3 days at least. We can get this by running the query below.
+
+SELECT * 
+FROM employees.employees 
+WHERE hire_date >= DATE_SUB(NOW(), INTERVAL 3DAY)
+
+Because this data is stale, the query's result would be an empty set. 
+If you are working with the same dataset, you should take note of this.
+
+So, I checked for the max hire_date available, and I will be using that for my pipeline.
+
+select max(hire_date) from employees.employees;
+
+Next, we should create our pipeline like the previous DAG, but with a twist: We would de-duplicate our data. 
+Assuming we are copying hire_date -3 at all times and just inserting it into the main table,
+we would have duplicates with an overlap of at least 3 days.
+
+Creating the Incremental Pipeline
+I have created the file incremental_employees_dag.py to answer the second question, which looks like this.
+
+Finally, I can query both — employees and employees_staging tables in Big Query.
+select * from 'windy-gearbox-350109.mysql_to_gbq.employee' limit 1000;
+select * from 'windy-gearbox-350109.mysql_to_gbq.employee_staging' limit 1000;
